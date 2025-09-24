@@ -1,0 +1,1278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code & Barcode Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-auth-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-firestore-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-storage-compat.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: transparent;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            background:transparent;
+            border-radius: 20px;
+            box-shadow: 0 15px 20px #2f292e;
+            overflow: hidden;
+            max-width: 1200px;
+            width: 90%;
+            min-height: 700px;
+        }
+
+        .header {
+            background: #34495e;
+            color: white;
+            text-align: center;
+            padding: 30px;
+        }
+
+        .header h1 {
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .auth-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 500px;
+            padding: 40px;
+        }
+
+        .auth-form {
+            background:#bdc3c7;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 2px 8px 12px rgba(9, 9, 9, 0.733);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .auth-form h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #000000;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            font-size: 50px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: bold;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #ff793f;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            
+        }
+
+        .main-app {
+            display: none;
+            padding: 40px;
+        }
+
+        .user-info {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #84817a46;
+            border-radius: 10px;
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 30px;
+            background: #f3f4f5;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            background: #f8f9fa;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .tab.active {
+            background: linear-gradient(135deg, #1439df 0%, #19013190 100%);
+            color: white;
+            font-weight: bold;
+            border-radius: 10px;
+        }
+        .tab:hover{
+          color: rgb(103, 8, 40);
+          font-family: 'Courier New', Courier, monospace;
+          font-weight: bold;
+          
+
+
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+        }
+
+        .color-picker {
+            width: 150px;
+            height: 50px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .preview-section {
+            background: #cee0f2;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        #qrcode, #barcode {
+            margin: 20px 0;
+        }
+
+        .download-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .download-btn {
+            padding: 8px 16px;
+            width: auto;
+            min-width: 100px;
+            background: #28a745;
+        }
+
+        .download-btn:hover {
+            background: #215188;
+        }
+
+        .saved-codes {
+            margin-top: 30px;
+        }
+
+        .code-item {
+            background: rgb(226, 225, 230);
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .code-info {
+            flex: 1;
+        }
+
+        .code-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .delete-btn {
+            background: #dc3545;
+            padding: 8px 16px;
+            width: auto;
+        }
+
+        .delete-btn:hover {
+            background: #c82333;
+        }
+
+        .logo-upload {
+            margin-bottom: 20px;
+        }
+
+        .logo-preview {
+            max-width: 100px;
+            max-height: 100px;
+            border: 2px dashed #ddd;
+            border-radius: 10px;
+            margin-top: 10px;
+        }
+
+        .auth-switch {
+            text-align: center;
+            margin-top: 20px;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        .auth-switch a {
+            color: #190238;
+            text-decoration: none;
+        }
+
+        .auth-switch a:hover {
+            text-decoration: underline;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+            min-width: 300px;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background: #2ecc71;
+        }
+
+        .notification.error {
+            background:#e74c3c;
+        }
+
+        .notification.info {
+            background:#34ace0;
+        }
+        .button-btn{
+            background-color: #28a745;
+            padding: 10px;
+            box-shadow: 0px 4px 10px black;
+            width: 100px;
+            height: 50px;
+            display: flex;
+            justify-content: space-evenly;
+            text-align: center;
+            line-height: 35px;
+            color: black;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+
+
+
+
+        }
+
+        .qr-generate{
+            background-color: #28a745;
+            padding: 10px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.662);
+            width: 100%;
+            height: 50px;
+            display: flex;
+            justify-content: space-evenly;
+            text-align: center;
+            line-height: 35px;
+            color: black;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+
+
+
+
+        }
+
+        .qr-generate:hover{
+
+            background-color: #34495e;
+        }
+        .wel-user{
+            font-family: 'Courier New', Courier, monospace;
+            font-size:20px;
+            color:  rgb(214, 61, 5);
+
+
+        }
+        .header {
+    text-align: center;
+    padding: 10px;
+    background:  #34495e; /* শুধু ব্যাকগ্রাউন্ড */
+}
+
+
+       
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>QR Code & Barcode Generator</h1>
+            <p>Generate, customize, and save your codes with ease</p>
+        </div>
+
+        <!-- Authentication Section -->
+        <div id="authContainer" class="auth-container">
+            <div class="auth-form">
+                <div id="loginForm">
+                    <h2>Login</h2>
+                    <div id="authMessage"></div>
+                    <div class="form-group">
+                        <label for="loginEmail">Email:</label>
+                        <input type="email" id="loginEmail" required placeholder="Email" style="color: rgb(227, 46, 188); font-weight: bold;">
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">Password:</label>
+                        <input type="password" id="loginPassword" required placeholder="Password">
+                    </div>
+                    <button onclick="login()">Login</button>
+                    <div class="auth-switch">
+                        <a href="#" onclick="showRegister()">Don't have an account? Register</a>
+                    </div>
+                </div>
+
+                <div id="registerForm" style="display: none;">
+                    <h2>Register</h2>
+                    <div id="registerMessage"></div>
+                    <div class="form-group">
+                        <label for="registerEmail">Email:</label>
+                        <input type="email" id="registerEmail" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="registerPassword">Password:</label>
+                        <input type="password" id="registerPassword" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmPassword">Confirm Password:</label>
+                        <input type="password" id="confirmPassword" required>
+                    </div>
+                    <button onclick="register()">Register</button>
+                    <div class="auth-switch">
+                        <a href="#" onclick="showLogin()">Already have an account? Login</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Application -->
+        <div id="mainApp" class="main-app">
+            <div class="user-info">
+                <p class="wel-user">Welcome, <span id="userEmail"></span></p>
+                <button onclick="logout()" class="button-btn" style="width: auto; padding: 8px 16px; margin-top: 30px;">Logout</button>
+               
+            </div>
+
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab('qr')">QR Code Generator</div>
+                <div class="tab" onclick="switchTab('barcode')">Barcode Generator</div>
+                <div class="tab" onclick="switchTab('saved')">Saved Codes</div>
+            </div>
+
+            <!-- QR Code Tab -->
+            <div id="qrTab" class="tab-content active">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="qrText">Text/URL:</label>
+                        <textarea id="qrText" rows="3" placeholder="Enter text or URL to generate QR code"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="qrFileName">File Name:</label>
+                        <input type="text" id="qrFileName" placeholder="my-qr-code">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="qrSize">Size:</label>
+                        <select id="qrSize">
+                            <option value="200">200x200</option>
+                            <option value="300" selected>300x300</option>
+                            <option value="400">400x400</option>
+                            <option value="500">500x500</option>
+                            <option value="600">600x600</option>
+                            <option value="700">700x700</option>
+                            
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="qrColor">Foreground Color:</label>
+                        <input type="color" id="qrColor" value="#000000" class="color-picker">
+                    </div>
+                    <div class="form-group">
+                        <label for="qrBgColor">Background Color:</label>
+                        <input type="color" id="qrBgColor" value="#FFFFFF" class="color-picker">
+                    </div>
+                </div>
+
+                <div class="logo-upload">
+                    <label for="qrLogo">Add Logo:</label>
+                    <input type="file" id="qrLogo" accept="image/*" onchange="previewLogo(this, 'qrLogoPreview')">
+                    <img id="qrLogoPreview" class="logo-preview" style="display: none;">
+                </div>
+
+                <button onclick="generateQR()" class="qr-generate">Generate QR Code</button>
+
+                <div class="preview-section">
+                    <div id="qrcode"></div>
+                    <div class="download-buttons" id="qrDownloads" style="display: none;">
+                        <button class="download-btn" onclick="downloadCode('qr', 'png')">PNG</button>
+                        <button class="download-btn" onclick="downloadCode('qr', 'jpg')">JPG</button>
+                        <button class="download-btn" onclick="downloadCode('qr', 'jpeg')">JPEG</button>
+                        <button class="download-btn" onclick="downloadCode('qr', 'svg')">SVG</button>
+                        <button class="download-btn" onclick="saveToFirebase('qr')" style="background: #17a2b8;">Save Us</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Barcode Tab -->
+            <div id="barcodeTab" class="tab-content">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="barcodeText">Text/Number:</label>
+                        <input type="text" id="barcodeText" placeholder="Enter text or number">
+                    </div>
+                    <div class="form-group">
+                        <label for="barcodeFileName">File Name:</label>
+                        <input type="text" id="barcodeFileName" placeholder="my-barcode">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="barcodeFormat">Format:</label>
+                        <select id="barcodeFormat">
+                            <option value="CODE128">CODE128</option>
+                            <option value="EAN13">EAN13</option>
+                            <option value="EAN8">EAN8</option>
+                            <option value="UPC">UPC</option>
+                            <option value="CODE39">CODE39</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="barcodeWidth">Width:</label>
+                        <select id="barcodeWidth">
+                            <option value="1">Thin</option>
+                            <option value="2" selected>Normal</option>
+                            <option value="3">Thick</option>
+                            <option value="3">Positon</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="barcodeHeight">Height:</label>
+                        <select id="barcodeHeight">
+                            <option value="50">50px</option>
+                            <option value="100" selected>100px</option>
+                            <option value="150">150px</option>
+                            <option value="200">200px</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="barcodeColor">Color:</label>
+                        <input type="color" id="barcodeColor" value="#000000" class="color-picker">
+                    </div>
+                    <div class="form-group">
+                        <label for="barcodeBgColor">Background:</label>
+                        <input type="color" id="barcodeBgColor" value="#FFFFFF" class="color-picker">
+                    </div>
+                </div>
+
+                <button onclick="generateBarcode()">Generate Barcode</button>
+
+                <div class="preview-section">
+                    <canvas id="barcode"></canvas>
+                    <div class="download-buttons" id="barcodeDownloads" style="display: none;">
+                        <button class="download-btn" onclick="downloadCode('barcode', 'png')">PNG</button>
+                        <button class="download-btn" onclick="downloadCode('barcode', 'jpg')">JPG</button>
+                        <button class="download-btn" onclick="downloadCode('barcode', 'jpeg')">JPEG</button>
+                        <button class="download-btn" onclick="downloadCode('barcode', 'svg')">SVG</button>
+                        <button class="download-btn" onclick="saveToFirebase('barcode')" style="background: #17a2b8;">Save to Cloud</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Saved Codes Tab -->
+            <div id="savedTab" class="tab-content">
+                <h3>Your Saved Codes</h3>
+                <div id="savedCodes" class="saved-codes">
+                    <p>Loading saved codes...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCqPyV0Ww2ZudQpMIzILC9JdTl10BAPY3w",
+            authDomain: "barcode-integration.firebaseapp.com",
+            projectId: "barcode-integration",
+            storageBucket: "barcode-integration.appspot.com",
+            messagingSenderId: "997762006717",
+            appId: "1:997762006717:web:a3ecacd13d6d247d7c81d4",
+            measurementId: "G-DWTV95ELV4"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        const storage = firebase.storage();
+
+        let currentUser = null;
+        let currentQRCode = null;
+        let currentBarcode = null;
+
+        // Notification system
+        function showNotification(message, type = 'info', duration = 4000) {
+            // Remove existing notifications
+            const existingNotifications = document.querySelectorAll('.notification');
+            existingNotifications.forEach(notification => notification.remove());
+
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <span>${message}</span>
+                    <button onclick="this.parentElement.parentElement.remove()" 
+                            style="background: none; border: none; color: white; font-size: 18px; cursor: pointer; margin-left: 15px;">×</button>
+                </div>
+            `;
+
+            // Add to page
+            document.body.appendChild(notification);
+
+            // Show notification
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 100);
+
+            // Auto remove
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.classList.remove('show');
+                    setTimeout(() => {
+                        if (notification.parentNode) {
+                            notification.remove();
+                        }
+                    }, 300);
+                }
+            }, duration);
+        }
+
+        // Authentication functions
+        function showLogin() {
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('registerForm').style.display = 'none';
+        }
+
+        function showRegister() {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('registerForm').style.display = 'block';
+        }
+
+        async function login() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+
+            if (!email || !password) {
+                showNotification('Please fill in all fields', 'error');
+                return;
+            }
+
+            try {
+                showNotification('Logging in...', 'info', 2000);
+                await auth.signInWithEmailAndPassword(email, password);
+                showNotification('✅ Login successful! Welcome back!', 'success');
+            } catch (error) {
+                showNotification('❌ Login failed: ' + error.message, 'error');
+            }
+        }
+
+        async function register() {
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (!email || !password || !confirmPassword) {
+                showNotification('Please fill in all fields', 'error');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                showNotification('❌ Passwords do not match!', 'error');
+                return;
+            }
+
+            if (password.length < 6) {
+                showNotification('❌ Password must be at least 6 characters', 'error');
+                return;
+            }
+
+            try {
+                showNotification('Creating account...', 'info', 2000);
+                await auth.createUserWithEmailAndPassword(email, password);
+                showNotification('✅ Registration successful! Welcome!', 'success');
+            } catch (error) {
+                showNotification('❌ Registration failed: ' + error.message, 'error');
+            }
+        }
+
+        function logout() {
+            showNotification('Logging out...', 'info', 1500);
+            auth.signOut();
+        }
+
+        // Auth state observer
+        auth.onAuthStateChanged(user => {
+            console.log('Auth state changed:', user ? user.email : 'No user');
+            
+            if (user) {
+                currentUser = user;
+                document.getElementById('authContainer').style.display = 'none';
+                document.getElementById('mainApp').style.display = 'block';
+                document.getElementById('userEmail').textContent = user.email;
+                
+                // Auto-load saved codes if on saved tab
+                setTimeout(() => {
+                    if (document.getElementById('savedTab').classList.contains('active')) {
+                        loadSavedCodes();
+                    }
+                }, 1000);
+            } else {
+                currentUser = null;
+                document.getElementById('authContainer').style.display = 'flex';
+                document.getElementById('mainApp').style.display = 'none';
+                
+                // Clear any existing data
+                document.getElementById('savedCodes').innerHTML = '';
+            }
+        });
+
+        function showMessage(elementId, message, type) {
+            const messageDiv = document.getElementById(elementId);
+            messageDiv.innerHTML = `<div class="${type}">${message}</div>`;
+            setTimeout(() => {
+                messageDiv.innerHTML = '';
+            }, 5000);
+        }
+
+        // Tab switching
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            document.querySelector(`.tab[onclick="switchTab('${tabName}')"]`).classList.add('active');
+            document.getElementById(`${tabName}Tab`).classList.add('active');
+
+            if (tabName === 'saved' && currentUser) {
+                console.log('Loading saved codes for tab switch...');
+                loadSavedCodes();
+            }
+        }
+
+        // Logo preview
+        function previewLogo(input, previewId) {
+            const preview = document.getElementById(previewId);
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        // QR Code generation
+        async function generateQR() {
+            const text = document.getElementById('qrText').value;
+            if (!text.trim()) {
+                showNotification('❌ Please enter text or URL to generate QR code', 'error');
+                return;
+            }
+
+            const size = parseInt(document.getElementById('qrSize').value);
+            const color = document.getElementById('qrColor').value;
+            const bgColor = document.getElementById('qrBgColor').value;
+
+            const qrContainer = document.getElementById('qrcode');
+            qrContainer.innerHTML = '';
+
+            try {
+                showNotification('🔄 Generating QR code...', 'info', 2000);
+
+                // Create canvas element
+                const canvas = document.createElement('canvas');
+                canvas.width = size;
+                canvas.height = size;
+
+                // Generate QR code using QRious
+                const qr = new QRious({
+                    element: canvas,
+                    value: text,
+                    size: size,
+                    foreground: color,
+                    background: bgColor,
+                    level: 'M'
+                });
+
+                // Add logo if selected
+                const logoFile = document.getElementById('qrLogo').files[0];
+                if (logoFile) {
+                    const ctx = canvas.getContext('2d');
+                    const img = new Image();
+                    img.onload = function() {
+                        const logoSize = size * 0.15;
+                        const x = (size - logoSize) / 2;
+                        const y = (size - logoSize) / 2;
+                        
+                        // Create a white background for the logo
+                        ctx.fillStyle = bgColor;
+                        ctx.fillRect(x - 5, y - 5, logoSize + 10, logoSize + 10);
+                        
+                        // Draw the logo
+                        ctx.drawImage(img, x, y, logoSize, logoSize);
+                        
+                        showNotification('✅ QR code generated successfully with logo!', 'success');
+                    };
+                    img.src = URL.createObjectURL(logoFile);
+                } else {
+                    showNotification('✅ QR code generated successfully!', 'success');
+                }
+
+                // Set current QR code for download
+                currentQRCode = canvas;
+                qrContainer.appendChild(canvas);
+                document.getElementById('qrDownloads').style.display = 'flex';
+
+            } catch (error) {
+                console.error('QR Code Error:', error);
+                showNotification('❌ Failed to generate QR code: ' + error.message, 'error');
+            }
+        }
+
+        // Barcode generation
+        function generateBarcode() {
+            const text = document.getElementById('barcodeText').value;
+            if (!text.trim()) {
+                showNotification('❌ Please enter text or number to generate barcode', 'error');
+                return;
+            }
+
+            const format = document.getElementById('barcodeFormat').value;
+            const width = parseInt(document.getElementById('barcodeWidth').value);
+            const height = parseInt(document.getElementById('barcodeHeight').value);
+            const color = document.getElementById('barcodeColor').value;
+            const bgColor = document.getElementById('barcodeBgColor').value;
+
+            const canvas = document.getElementById('barcode');
+            
+            try {
+                showNotification('🔄 Generating barcode...', 'info', 2000);
+
+                JsBarcode(canvas, text, {
+                    format: format,
+                    width: width,
+                    height: height,
+                    lineColor: color,
+                    background: bgColor,
+                    displayValue: true
+                });
+
+                currentBarcode = canvas;
+                document.getElementById('barcodeDownloads').style.display = 'flex';
+                showNotification('✅ Barcode generated successfully!', 'success');
+            } catch (error) {
+                console.error('Barcode Error:', error);
+                showNotification('❌ Failed to generate barcode: ' + error.message, 'error');
+            }
+        }
+
+        // Download functions
+        function downloadCode(type, format) {
+            const canvas = type === 'qr' ? currentQRCode : currentBarcode;
+            const fileName = type === 'qr' ? 
+                (document.getElementById('qrFileName').value || 'qr-code') :
+                (document.getElementById('barcodeFileName').value || 'barcode');
+
+            if (!canvas) {
+                alert('Please generate a code first');
+                return;
+            }
+
+            if (format === 'svg') {
+                // For SVG, we need to recreate as SVG
+                downloadAsSVG(type, fileName);
+            } else {
+                const link = document.createElement('a');
+                link.download = `${fileName}.${format}`;
+                
+                if (format === 'png') {
+                    link.href = canvas.toDataURL('image/png');
+                } else {
+                    link.href = canvas.toDataURL('image/jpeg', 0.9);
+                }
+                
+                link.click();
+            }
+        }
+
+        function downloadAsSVG(type, fileName) {
+            // Create SVG version
+            const canvas = type === 'qr' ? currentQRCode : currentBarcode;
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('width', canvas.width);
+            svg.setAttribute('height', canvas.height);
+            
+            const img = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+            img.setAttribute('width', canvas.width);
+            img.setAttribute('height', canvas.height);
+            img.setAttribute('href', canvas.toDataURL());
+            
+            svg.appendChild(img);
+            
+            const svgData = new XMLSerializer().serializeToString(svg);
+            const svgBlob = new Blob([svgData], { type: 'image/svg+xml' });
+            const url = URL.createObjectURL(svgBlob);
+            
+            const link = document.createElement('a');
+            link.download = `${fileName}.svg`;
+            link.href = url;
+            link.click();
+            
+            URL.revokeObjectURL(url);
+        }
+
+        // Firebase save functions
+        async function saveToFirebase(type) {
+            console.log('=== SAVE TO FIREBASE START ===');
+            console.log('Type:', type);
+            console.log('Current user:', currentUser);
+            
+            if (!currentUser) {
+                showNotification('❌ Please login first to save codes', 'error');
+                console.log('No user logged in');
+                return;
+            }
+
+            const canvas = type === 'qr' ? currentQRCode : currentBarcode;
+            const fileName = type === 'qr' ? 
+                (document.getElementById('qrFileName').value || 'qr-code') :
+                (document.getElementById('barcodeFileName').value || 'barcode');
+            const text = type === 'qr' ? 
+                document.getElementById('qrText').value :
+                document.getElementById('barcodeText').value;
+
+            console.log('Canvas:', canvas);
+            console.log('Filename:', fileName);
+            console.log('Text:', text);
+
+            if (!canvas) {
+                showNotification('❌ Please generate a code first before saving', 'error');
+                console.log('No canvas found');
+                return;
+            }
+
+            if (!text.trim()) {
+                showNotification('❌ Cannot save empty code', 'error');
+                console.log('No text provided');
+                return;
+            }
+
+            try {
+                // Show saving notification
+                showNotification('💾 Saving your code to cloud...', 'info', 15000);
+
+                // Get the save button and update its state
+                const saveButtons = document.querySelectorAll('button[onclick*="saveToFirebase"]');
+                saveButtons.forEach(btn => {
+                    btn.textContent = 'Saving...';
+                    btn.disabled = true;
+                    btn.style.opacity = '0.7';
+                });
+
+                console.log('Starting canvas to blob conversion...');
+
+                // Convert canvas to blob with error handling
+                const blobPromise = new Promise((resolve, reject) => {
+                    canvas.toBlob((blob) => {
+                        if (blob) {
+                            console.log('Blob created successfully, size:', blob.size);
+                            resolve(blob);
+                        } else {
+                            reject(new Error('Failed to create blob from canvas'));
+                        }
+                    }, 'image/png', 0.9);
+                });
+
+                const blob = await blobPromise;
+
+                // Create unique filename with timestamp
+                const timestamp = Date.now();
+                const cleanFileName = fileName.replace(/[^a-zA-Z0-9]/g, '_');
+                const uniqueFileName = `${cleanFileName}_${timestamp}.png`;
+                
+                console.log('Unique filename:', uniqueFileName);
+                console.log('User ID:', currentUser.uid);
+                
+                // Upload to Firebase Storage
+                const storageRef = storage.ref();
+                const imagePath = `codes/${currentUser.uid}/${uniqueFileName}`;
+                const imageRef = storageRef.child(imagePath);
+                
+                console.log('Storage path:', imagePath);
+                console.log('Starting upload...');
+                
+                // Upload with progress tracking
+                const uploadTask = imageRef.put(blob);
+                
+                uploadTask.on('state_changed', 
+                    (snapshot) => {
+                        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                        console.log('Upload progress:', progress + '%');
+                        if (progress < 100) {
+                            showNotification(`📤 Uploading... ${Math.round(progress)}%`, 'info', 2000);
+                        }
+                    },
+                    (error) => {
+                        console.error('Upload error details:', error);
+                        console.error('Error code:', error.code);
+                        console.error('Error message:', error.message);
+                        showNotification('❌ Upload failed: ' + error.message, 'error');
+                        resetSaveButtons();
+                    },
+                    async () => {
+                        try {
+                            console.log('Upload completed successfully!');
+                            
+                            // Get download URL
+                            const downloadURL = await uploadTask.snapshot.ref.getDownloadURL();
+                            console.log('Download URL obtained:', downloadURL);
+
+                            showNotification('📄 Saving metadata to database...', 'info', 3000);
+
+                            // Save metadata to Firestore
+                            const docData = {
+                                userId: currentUser.uid,
+                                type: type,
+                                fileName: fileName,
+                                text: text,
+                                downloadURL: downloadURL,
+                                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                                fileSize: blob.size,
+                                dimensions: `${canvas.width}x${canvas.height}`,
+                                uploadPath: imagePath
+                            };
+
+                            console.log('Document data to save:', docData);
+                            console.log('Adding to Firestore collection: codes');
+
+                            const docRef = await db.collection('codes').add(docData);
+                            console.log('Document written with ID:', docRef.id);
+
+                            // Success notification
+                            showNotification('✅ Code saved successfully! Check "Saved Codes" tab.', 'success', 6000);
+                            
+                            // Force refresh saved codes if on that tab
+                            if (document.getElementById('savedTab').classList.contains('active')) {
+                                console.log('Auto-refreshing saved codes...');
+                                setTimeout(() => {
+                                    loadSavedCodes();
+                                }, 1500);
+                            }
+                            
+                            console.log('=== SAVE PROCESS COMPLETED SUCCESSFULLY ===');
+                            
+                        } catch (firestoreError) {
+                            console.error('Firestore save error:', firestoreError);
+                            console.error('Firestore error code:', firestoreError.code);
+                            console.error('Firestore error message:', firestoreError.message);
+                            showNotification('❌ Failed to save to database: ' + firestoreError.message, 'error');
+                        }
+                        
+                        resetSaveButtons();
+                    }
+                );
+
+            } catch (error) {
+                console.error('Save initialization error:', error);
+                console.error('Error details:', error);
+                showNotification('❌ Save failed: ' + error.message, 'error');
+                resetSaveButtons();
+            }
+        }
+
+        function resetSaveButtons() {
+            const saveButtons = document.querySelectorAll('button[onclick*="saveToFirebase"]');
+            saveButtons.forEach(btn => {
+                btn.textContent = 'Save to Cloud';
+                btn.disabled = false;
+                btn.style.opacity = '1';
+            });
+        }
+
+        // Load saved codes
+        async function loadSavedCodes() {
+            const savedCodesDiv = document.getElementById('savedCodes');
+            
+            if (!currentUser) {
+                savedCodesDiv.innerHTML = '<p>Please login to view saved codes.</p>';
+                return;
+            }
+
+            savedCodesDiv.innerHTML = '<p>Loading...</p>';
+
+            try {
+                console.log('Loading codes for user:', currentUser.uid);
+                
+                // Get all documents in codes collection for this user
+                const codesRef = db.collection('codes');
+                const querySnapshot = await codesRef.where('userId', '==', currentUser.uid).get();
+
+                console.log('Query result size:', querySnapshot.size);
+
+                if (querySnapshot.empty) {
+                    savedCodesDiv.innerHTML = `
+                        <div style="text-align: center; padding: 40px;">
+                            <p>No saved codes found.</p>
+                            <p>Generate and save some QR codes or barcodes to see them here!</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let codesArray = [];
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    console.log('Code document:', doc.id, data);
+                    codesArray.push({
+                        id: doc.id,
+                        fileName: data.fileName || 'Untitled',
+                        type: data.type || 'unknown',
+                        text: data.text || 'No text',
+                        downloadURL: data.downloadURL || '',
+                        createdAt: data.createdAt
+                    });
+                });
+
+                // Sort by createdAt (newest first)
+                codesArray.sort((a, b) => {
+                    if (!a.createdAt && !b.createdAt) return 0;
+                    if (!a.createdAt) return 1;
+                    if (!b.createdAt) return -1;
+                    
+                    try {
+                        const dateA = a.createdAt.toDate ? a.createdAt.toDate() : new Date(a.createdAt);
+                        const dateB = b.createdAt.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
+                        return dateB - dateA;
+                    } catch (e) {
+                        return 0;
+                    }
+                });
+
+                let html = '';
+                codesArray.forEach((data) => {
+                    let date = 'Unknown';
+                    try {
+                        if (data.createdAt) {
+                            date = data.createdAt.toDate ? 
+                                data.createdAt.toDate().toLocaleDateString() : 
+                                new Date(data.createdAt).toLocaleDateString();
+                        }
+                    } catch (e) {
+                        date = 'Unknown';
+                    }
+                    
+                    html += `
+                        <div class="code-item">
+                            <div class="code-info">
+                                <h4>${data.fileName}</h4>
+                                <p><strong>Type:</strong> ${data.type.toUpperCase()}</p>
+                                <p><strong>Content:</strong> ${data.text.length > 50 ? data.text.substring(0, 50) + '...' : data.text}</p>
+                                <p><strong>Created:</strong> ${date}</p>
+                            </div>
+                            <div class="code-actions">
+                                <button class="download-btn" onclick="downloadFromFirebase('${data.downloadURL}', '${data.fileName}')">
+                                    Download
+                                </button>
+                                <button class="delete-btn" onclick="confirmDelete('${data.id}', '${data.downloadURL || ''}', '${data.fileName}')">
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                savedCodesDiv.innerHTML = html;
+                console.log('Successfully loaded', codesArray.length, 'codes');
+
+            } catch (error) {
+                console.error('Detailed error loading codes:', error);
+                console.error('Error code:', error.code);
+                console.error('Error message:', error.message);
+                
+                let errorMessage = 'Unknown error occurred';
+                
+                if (error.code === 'permission-denied') {
+                    errorMessage = 'Permission denied. Please check your Firebase security rules.';
+                } else if (error.code === 'unavailable') {
+                    errorMessage = 'Firebase service is temporarily unavailable. Please try again later.';
+                } else if (error.message) {
+                    errorMessage = error.message;
+                }
+                
+                savedCodesDiv.innerHTML = `
+                    <div style="background: #f8d7da; color: #721c24; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                        <h4>Error Loading Codes</h4>
+                        <p><strong>Error:</strong> ${errorMessage}</p>
+                        <p><strong>User ID:</strong> ${currentUser ? currentUser.uid : 'Not logged in'}</p>
+                        <button onclick="loadSavedCodes()" style="margin-top: 10px; padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                            Retry
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        // Download from Firebase
+        function downloadFromFirebase(url, fileName) {
+            if (!url) {
+                showNotification('❌ Download URL not available', 'error');
+                return;
+            }
+            
+            showNotification('📥 Starting download...', 'info', 2000);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = fileName + '.png';
+            link.target = '_blank';
+            link.click();
+            
+            setTimeout(() => {
+                showNotification('✅ Download completed!', 'success');
+            }, 1000);
+        }
+
+        // Confirm delete with custom modal
+        function confirmDelete(docId, downloadURL, fileName) {
+            showNotification(`❓ Are you sure you want to delete "${fileName}"? This action cannot be undone.`, 'error', 8000);
+            
+            // Create confirmation buttons
+            const notification = document.querySelector('.notification');
+            if (notification) {
+                notification.innerHTML = `
+                    <div>
+                        <p>❓ Delete "${fileName}"?</p>
+                        <p style="font-size: 12px; opacity: 0.9; margin: 10px 0;">This action cannot be undone.</p>
+                        <div style="display: flex; gap: 10px; margin-top: 15px;">
+                            <button onclick="deleteFromFirebase('${docId}', '${downloadURL}'); this.closest('.notification').remove();" 
+                                    style="background: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
+                                Yes, Delete
+                            </button>
+                            <button onclick="this.closest('.notification').remove();" 
+                                    style="background: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // Delete from Firebase
+        async function deleteFromFirebase(docId, downloadURL) {
+            try {
+                showNotification('🗑️ Deleting code...', 'info', 3000);
+
+                // Delete from Firestore
+                await db.collection('codes').doc(docId).delete();
+
+                // Delete from Storage if URL exists
+                if (downloadURL) {
+                    try {
+                        const storageRef = storage.refFromURL(downloadURL);
+                        await storageRef.delete();
+                    } catch (storageError) {
+                        console.log('Storage delete error (may not exist):', storageError);
+                    }
+                }
+
+                showNotification('✅ Code deleted successfully!', 'success');
+                loadSavedCodes(); // Refresh the list
+            } catch (error) {
+                console.error('Delete error:', error);
+                showNotification('❌ Error deleting code: ' + error.message, 'error');
+            }
+        }
+    </script>
+</body>
+</html>
